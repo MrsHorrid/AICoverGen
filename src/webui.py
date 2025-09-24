@@ -69,11 +69,24 @@ def extract_zip(extraction_folder, zip_name):
 
 def download_online_model(url, dir_name, progress=gr.Progress()):
     try:
+        if not url or not url.strip():
+            raise gr.Error('Please enter a download URL.')
+        
+        if not dir_name or not dir_name.strip():
+            raise gr.Error('Please enter a model name.')
+        
         progress(0, desc=f'[~] Downloading voice model with name {dir_name}...')
         zip_name = url.split('/')[-1]
-        extraction_folder = os.path.join(rvc_models_dir, dir_name)
+        extraction_folder = os.path.join(rvc_models_dir, dir_name.strip())
+        
         if os.path.exists(extraction_folder):
-            raise gr.Error(f'Voice model directory {dir_name} already exists! Choose a different name for your voice model.')
+            # Check if directory is empty or contains model files
+            existing_files = os.listdir(extraction_folder)
+            if existing_files:
+                raise gr.Error(f'Voice model directory "{dir_name}" already exists and contains files! Choose a different name for your voice model.')
+            else:
+                # Directory exists but is empty, we can use it
+                pass
 
         if 'pixeldrain.com' in url:
             url = f'https://pixeldrain.com/api/file/{zip_name}'
@@ -90,9 +103,21 @@ def download_online_model(url, dir_name, progress=gr.Progress()):
 
 def upload_local_model(zip_path, dir_name, progress=gr.Progress()):
     try:
-        extraction_folder = os.path.join(rvc_models_dir, dir_name)
+        if not zip_path:
+            raise gr.Error('Please select a zip file to upload.')
+        
+        if not dir_name or not dir_name.strip():
+            raise gr.Error('Please enter a model name.')
+        
+        extraction_folder = os.path.join(rvc_models_dir, dir_name.strip())
         if os.path.exists(extraction_folder):
-            raise gr.Error(f'Voice model directory {dir_name} already exists! Choose a different name for your voice model.')
+            # Check if directory is empty or contains model files
+            existing_files = os.listdir(extraction_folder)
+            if existing_files:
+                raise gr.Error(f'Voice model directory "{dir_name}" already exists and contains files! Choose a different name for your voice model.')
+            else:
+                # Directory exists but is empty, we can use it
+                pass
 
         zip_name = zip_path.name
         progress(0.5, desc='[~] Extracting zip...')
@@ -236,7 +261,8 @@ if __name__ == '__main__':
                                        inst_gain, index_rate, filter_radius, rms_mix_rate, f0_method, crepe_hop_length,
                                        protect, pitch_all, reverb_rm_size, reverb_wet, reverb_dry, reverb_damping,
                                        output_format],
-                               outputs=[ai_cover])
+                               outputs=[ai_cover],
+                               show_progress=True)
             clear_btn.click(lambda: [0, 0, 0, 0, 0.5, 3, 0.25, 0.33, 'rmvpe', 128, 0, 0.15, 0.2, 0.8, 0.7, 'mp3', None],
                             outputs=[pitch, main_gain, backup_gain, inst_gain, index_rate, filter_radius, rms_mix_rate,
                                      protect, f0_method, crepe_hop_length, pitch_all, reverb_rm_size, reverb_wet,

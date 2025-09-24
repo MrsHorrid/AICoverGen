@@ -66,12 +66,26 @@ class MDX:
 
         # Set the device and the provider (CPU or CUDA)
         self.device = torch.device(f'cuda:{processor}') if processor >= 0 else torch.device('cpu')
-        self.provider = ['CUDAExecutionProvider'] if processor >= 0 else ['CPUExecutionProvider']
+        
+        # Use CUDA if available, fallback to CPU if needed
+        if processor >= 0:
+            try:
+                # Try CUDA first
+                self.provider = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+                self.ort = ort.InferenceSession(model_path, providers=self.provider)
+                print(f"[INFO] Using CUDA provider for MDX model")
+            except Exception as e:
+                print(f"[WARNING] CUDA provider failed, falling back to CPU: {e}")
+                self.provider = ['CPUExecutionProvider']
+                self.ort = ort.InferenceSession(model_path, providers=self.provider)
+                print(f"[INFO] Using CPU provider for MDX model")
+        else:
+            self.provider = ['CPUExecutionProvider']
+            self.ort = ort.InferenceSession(model_path, providers=self.provider)
+            print(f"[INFO] Using CPU provider for MDX model")
 
         self.model = params
 
-        # Load the ONNX model using ONNX Runtime
-        self.ort = ort.InferenceSession(model_path, providers=self.provider)
         # Preload the model for faster performance
         self.ort.run(None, {'input': torch.rand(1, 4, params.dim_f, params.dim_t).numpy()})
         self.process = lambda spec: self.ort.run(None, {'input': spec.cpu().numpy()})[0]
